@@ -1,4 +1,7 @@
+
+import os
 from pathlib import Path
+from datetime import timedelta
 from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -12,12 +15,15 @@ CORS_ALLOW_ORIGINS = []
 CSRF_TRUSTED_ORIGINS = []
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_simplejwt',
     'accounts',
     'events',
     'tickets',
@@ -28,10 +34,12 @@ INSTALLED_APPS = [
     'notifications',
     'reports',
     'admin_panel',
-    
 ]
 
+AUTH_USER_MODEL = "accounts.User"
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
