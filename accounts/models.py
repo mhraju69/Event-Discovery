@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
-from django.contrib.auth import get_user_model
-User = get_user_model()
+from django.conf import settings
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -34,7 +33,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     cover = models.ImageField(upload_to='cover_images/', blank=True, null=True,)
     image = models.ImageField(upload_to='profile_images/', blank=True, null=True,)
     role = models.CharField(max_length=10, choices=ROLE, default='parent',verbose_name="User Role")
-    parent = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='children',)
+    parent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='children',)
     is_active = models.BooleanField(default=False,verbose_name="Active User")
     is_staff = models.BooleanField(default=False,verbose_name="Staff User")
     is_superuser = models.BooleanField(default=False,verbose_name="Super User")  
