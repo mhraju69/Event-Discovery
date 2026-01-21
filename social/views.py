@@ -37,7 +37,7 @@ class FriendView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        req = FriendRequest.objects.filter(id=request.query_params['id'], user=request.user).first()
+        req = FriendRequest.objects.filter(id=request.query_params.get('id'), user=request.user).first()
         if not req:
             return Response({'success': False, 'message': 'Friend request not found'})
         if req.status == 'pending':
@@ -51,7 +51,7 @@ class FriendView(APIView):
         return Response({'success': False, 'message': 'Friend request already accepted'})
         
     def delete(self, request):
-        req = Friends.objects.filter(id=request.query_params['id'], user=request.user).first()
+        req = Friends.objects.filter(id=request.query_params.get('id'), user=request.user).first()
         if not req:
             return Response({'success': False, 'message': 'Friend not found'})
         req.delete()
