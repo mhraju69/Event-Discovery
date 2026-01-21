@@ -43,8 +43,10 @@ class FriendView(APIView):
         if req.status == 'pending':
             req.status = 'accepted'
             req.save()
-            Friends.objects.create(user=request.user, friend=req.sender)
-            Friends.objects.create(user=req.sender, friend=request.user)
+            obj,_ = Friends.objects.get_or_create(user=request.user)
+            obj.friends.add(req.sender)
+            obj,_ = Friends.objects.get_or_create(user=req.sender)
+            obj.friends.add(request.user)
             return Response({'success': True, 'message': 'Friend request accepted'})
         return Response({'success': False, 'message': 'Friend request already accepted'})
         
