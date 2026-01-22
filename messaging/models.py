@@ -9,9 +9,9 @@ User = get_user_model()
 # Create your models here.
 
 class ChatRoom(models.Model):
-    CONVERSATION_TYPE_CHOICES = (("direct", "Direct Chat"),("group", "Group Chat"),("event", "Event Chat"),)
+    CONVERSATION_TYPE_CHOICES = (("private", "Private Chat"),("group", "Group Chat"),("event", "Event Chat"),)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    conversation_type = models.CharField(max_length=10, choices=CONVERSATION_TYPE_CHOICES)
+    type = models.CharField(max_length=10, choices=CONVERSATION_TYPE_CHOICES)
     name = models.CharField(max_length=255, blank=True, null=True)  
     members = models.ManyToManyField(User, related_name='conversations_members',)
     group = models.OneToOneField(Group,on_delete=models.CASCADE,null=True,blank=True,related_name="group_conversations")
@@ -23,7 +23,7 @@ class ChatRoom(models.Model):
 class Message(models.Model):
     MESSAGE_TYPE_CHOICES = (("text", "Text"),("image", "Image"),("file", "File"),("voice", "Voice"),)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    conversation = models.ForeignKey(ChatRoom,on_delete=models.CASCADE,related_name="messages",)    
+    room = models.ForeignKey(ChatRoom,on_delete=models.CASCADE,related_name="messages",)    
     sender = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,related_name="sent_messages",)
     message_type = models.CharField(max_length=10, choices=MESSAGE_TYPE_CHOICES, default="text")
     content = models.TextField(blank=True, null=True)

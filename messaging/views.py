@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from core.permissions import IsEventAdmin,IsGroupAdmin
 from rest_framework.permissions import IsAuthenticated
+from core.pagination import CustomLimitPagination
 # Create your views here.
 
 class GetChatRoomsView(APIView):
@@ -30,7 +31,7 @@ class CreateGroupChatView(APIView):
 
         self.check_object_permissions(request, group)
 
-        room,_ = ChatRoom.objects.get_or_create(group=group, admin=request.user, conversation_type="group",defaults={"name": f'{group.name} Group'})
+        room,_ = ChatRoom.objects.get_or_create(group=group, admin=request.user, type="group",defaults={"name": f'{group.name} Group'})
         if not _:
             return Response({"success": False, "log": "Group chat already exists"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -51,7 +52,7 @@ class JoinGroupChatView(APIView):
         if not group:
             return Response({"success": False, "log": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        room= ChatRoom.objects.filter(group=group, conversation_type="group").first()
+        room= ChatRoom.objects.filter(group=group, type="group").first()
 
         if not room:
             return Response({"success": False, "log": "Group chat not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -67,6 +68,7 @@ class JoinGroupChatView(APIView):
         room.save()
         return Response({"success": True, "log": ChatRoomSerializer(room).data}, status=status.HTTP_201_CREATED)
 
+
 class CreateEventChatView(APIView):
     permission_classes = [IsAuthenticated,IsEventAdmin]
     def post(self, request):
@@ -81,10 +83,31 @@ class CreateEventChatView(APIView):
 
         self.check_object_permissions(request, event)
 
-        room,_ = ChatRoom.objects.get_or_create(event=event, admin=request.user, conversation_type="event",defaults={"name": f'{event.name} Event'})
+        room,_ = ChatRoom.objects.get_or_create(event=event, admin=request.user, type="event",defaults={"name": f'{event.name} Event'})
         if not _:
             return Response({"success": False, "log": "Event chat already exists"}, status=status.HTTP_400_BAD_REQUEST)
         
         room.members.add(*event.members.all())
         room.save()
         return Response({"success": True, "log": ChatRoomSerializer(room).data}, status=status.HTTP_201_CREATED)
+
+
+class GetRoomListView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request,type=None):
+        if type not in ["private","group","event"]:
+            return Response({"success": False, "log": f"Invalid type {type}, possible values are private, group, event"}, status=status.HTTP_400_BAD_REQUEST)
+        rooms = ChatRoom.objects.filter(members=request.user,type=type)
+        return Response({"success": True,"type": type, "log": ChatRoomSerializer(rooms, many=True).data}, status=status.HTTP_200_OK)
+
+
+class GetRoomMessagesView(APIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomLimitPagination
+    def get(self, request, room):
+        room = ChatRoom.objects.filter(id=room).first()
+        if not room:
+            return Response({"success": False, "log": "Room not found"}, status=status.HTTP_404_NOT_FOUND)
+        self.check_object_permissions(request, room)
+        messages = Message.objects.filter(room=room).order_by('-created_at')
+        return Response({"success": True, "log": MessageSerializer(messages, many=True).data}, status=status.HTTP_200_OK)
