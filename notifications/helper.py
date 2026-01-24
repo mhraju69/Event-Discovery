@@ -2,6 +2,8 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from .models import Notification
 from .serializers import NotificationSerializer
+from .firebase_config import send_push_notification
+
 
 def send_notification(user, title, message, notification_type='system'):
     """
@@ -28,6 +30,13 @@ def send_notification(user, title, message, notification_type='system'):
             "notification": notification_data
         }
     )
+
+    # 4. Send Push Notification via FCM
+    try:
+        send_push_notification(user, title, message)
+    except Exception as e:
+        print(f"❌ FCM helper error: {e}")
+
     return notification
 
 

@@ -160,6 +160,14 @@ class GlobalChatConsumer(AsyncWebsocketConsumer):
                         'notification': notification_data
                     }
                 )
+
+                # Send Push Notification (FCM)
+                try:
+                    from notifications.firebase_config import send_push_notification
+                    await sync_to_async(send_push_notification)(recipient, title, message_obj.content)
+                except Exception as e:
+                    print(f"❌ FCM Error: {e}")
+
                 print(f"🔔 Notification sent to {recipient.email}")
 
         except Exception as e:
