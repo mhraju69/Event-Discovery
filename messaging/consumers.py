@@ -10,6 +10,8 @@ from .models import *
 from .serializers import MessageSerializer
 from rest_framework_simplejwt.tokens import AccessToken
 User = get_user_model()
+from django.db.models import Q
+import uuid
 
 @database_sync_to_async
 def get_user_from_token(token):
@@ -107,10 +109,62 @@ class GlobalChatConsumer(AsyncWebsocketConsumer):
                     'message': message_data
                 }
             )
+
+            # --- Notification Logic ---
+            await self.trigger_notifications(message_obj)
+
         except Exception as e:
             print(f"❌ Error in receive: {e}")
             import traceback
             traceback.print_exc()
+
+    async def trigger_notifications(self, message_obj):
+        """
+        Create and send notifications to all members of the room except the sender.
+        """
+        try:
+            from notifications.models import Notification
+            from notifications.serializers import NotificationSerializer
+
+            @database_sync_to_async
+            def get_recipients():
+                return list(self.room.members.exclude(id=self.user.id))
+
+            @database_sync_to_async
+            def create_notif(user, title, content):
+                return Notification.objects.create(
+                    user=user,
+                    title=title,
+                    message=content[:100],
+                    type='message'
+                )
+
+            recipients = await get_recipients()
+
+            for recipient in recipients:
+                title = f"New message from {self.user.name or self.user.email}"
+                if self.room.type != "private":
+                    title = f"New message in {self.room.name or 'Group'}"
+
+                notification_obj = await create_notif(recipient, title, message_obj.content)
+                
+                # Serialize
+                notification_data = await sync_to_async(lambda: NotificationSerializer(notification_obj).data)()
+                
+                # Send via Notification Socket
+                notification_group = f"user_notifications_{recipient.id}"
+                await self.channel_layer.group_send(
+                    notification_group,
+                    {
+                        'type': 'send_notification',
+                        'notification': notification_data
+                    }
+                )
+                print(f"🔔 Notification sent to {recipient.email}")
+
+        except Exception as e:
+            print(f"❌ Error triggering notifications: {e}")
+
 
     async def chat_message(self, event):
         message = event.get('message')
@@ -140,8 +194,27 @@ class GlobalChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_room(self, room_id):
         try:
-            room = ChatRoom.objects.get(id=room_id, members=self.user)
+            query_filter = Q(members=self.user)
+            
+            room_lookup = Q()
+            
+            is_uuid = False
+            try:
+                uuid.UUID(str(room_id))
+                is_uuid = True
+                room_lookup |= Q(id=room_id)
+            except (ValueError, TypeError):
+                pass
+                
+            if str(room_id).isdigit():
+                room_lookup |= Q(group_id=room_id) | Q(event_id=room_id)
+            
+            if not room_lookup:
+                print(f"⚠️ Invalid room_id format: {room_id}")
+                return None
+                
+            room = ChatRoom.objects.filter(query_filter & room_lookup).first()
             return room
-        except ChatRoom.DoesNotExist:
-            print(f"❌ Room lookup failed for room_id: {room_id} and user: {self.user.email}")
+        except Exception as e:
+            print(f"❌ Room lookup failed for room_id: {room_id}. Error: {e}")
             return None

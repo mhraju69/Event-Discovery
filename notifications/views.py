@@ -35,7 +35,7 @@ class NotificationAPIView(APIView):
         if not id:
             return Response({'success': False, 'log': 'Notification ID is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        notification = Notification.objects.filter(id=id, user=rsequest.user).first()
+        notification = Notification.objects.filter(id=id, user=request.user).first()
 
         if not notification:
             return Response({'success': False, 'log': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)

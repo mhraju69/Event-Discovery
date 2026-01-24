@@ -37,7 +37,6 @@ INSTALLED_APPS = [
     'subscriptions',
     'notifications',
     'reports',
-    'admin_panel',
 ]
 
 AUTH_USER_MODEL = "accounts.User"

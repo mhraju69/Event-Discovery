@@ -117,6 +117,23 @@ class SendFileMessageView(APIView):
             }
         )
 
+        # Trigger Notifications
+        from notifications.helper import send_notification
+        recipients = room.members.exclude(id=request.user.id)
+        notification_title = f"New message from {request.user.name or request.user.email}"
+        if room.type == "group":
+            notification_title = f"New message in {room.name or 'Group'}"
+        elif room.type == "event":
+            notification_title = f"Event update: {room.name or 'Event'}"
+
+        for recipient in recipients:
+            send_notification(
+                user=recipient,
+                title=notification_title,
+                message=content[:100] if content else f"Sent a {msg_type}",
+                notification_type='message'
+            )
+
         return Response({"success": True, "log": message_data}, status=status.HTTP_201_CREATED)
 
 

@@ -8,12 +8,15 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 import messaging.routing
+import notifications.routing
+
+websocket_urlpatterns = messaging.routing.websocket_urlpatterns + notifications.routing.websocket_urlpatterns
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
     "websocket": AuthMiddlewareStack(
         URLRouter(
-            messaging.routing.websocket_urlpatterns
+            websocket_urlpatterns
         )
     ),
 })
